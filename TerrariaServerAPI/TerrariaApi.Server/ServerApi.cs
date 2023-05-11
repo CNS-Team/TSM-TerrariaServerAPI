@@ -84,7 +84,7 @@ namespace TerrariaApi.Server
 			ForceUpdate = false;
 			Type t = Type.GetType("Mono.Runtime");
 			RunningMono = (t != null);
-			Main.SkipAssemblyLoad = true;
+			//Main.SkipAssemblyLoad = true;
 		}
 
 		internal static void Initialize(string[] commandLineArgs, Main game)
@@ -308,35 +308,11 @@ namespace TerrariaApi.Server
 
 		internal static void LoadPlugins()
 		{
-			string ignoredPluginsFilePath = Path.Combine(ServerPluginsDirectoryPath, "ignoredplugins.txt");
-
-			DangerousPluginDetector detector = new DangerousPluginDetector();
-
-			List<string> ignoredFiles = new List<string>();
-			if (File.Exists(ignoredPluginsFilePath))
-				ignoredFiles.AddRange(File.ReadAllLines(ignoredPluginsFilePath));
-
-			List<FileInfo> fileInfos = new DirectoryInfo(ServerPluginsDirectoryPath).GetFiles("*.dll").ToList();
-			fileInfos.AddRange(new DirectoryInfo(ServerPluginsDirectoryPath).GetFiles("*.dll-plugin"));
-			foreach (string additionalPath in AdditionalPluginsPaths)
-			{
-				var di = new DirectoryInfo(Path.Combine(AppContext.BaseDirectory, additionalPath));
-				fileInfos.AddRange(di.GetFiles("*.dll"));
-				fileInfos.AddRange(di.GetFiles("*.dll-plugin"));
-			}
-
+			List<FileInfo> fileInfos = Program.config.plugins.Select(p => new FileInfo(Path.Combine(ServerPluginsDirectoryPath, p) + ".dll")).ToList(); ;
 			Dictionary<TerrariaPlugin, Stopwatch> pluginInitWatches = new Dictionary<TerrariaPlugin, Stopwatch>();
 			foreach (FileInfo fileInfo in fileInfos)
 			{
 				string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileInfo.Name);
-				if (ignoredFiles.Contains(fileNameWithoutExtension))
-				{
-					LogWriter.ServerWriteLine(
-						string.Format("{0} was ignored from being loaded.", fileNameWithoutExtension), TraceLevel.Verbose);
-
-					continue;
-				}
-
 				try
 				{
 					Assembly assembly;
@@ -366,13 +342,6 @@ namespace TerrariaApi.Server
 
 					if (!InvalidateAssembly(assembly, fileInfo.Name))
 						continue;
-
-					if (detector.MaliciousAssembly(assembly))
-					{
-						LogWriter.ServerWriteLine(string.Format("Assembly {0} {1} has been identified to the TShock Team as a dangerous plugin and needs to be removed.", assembly.GetName().Name, assembly.GetName().Version), TraceLevel.Error);
-						LogWriter.ServerWriteLine(string.Format("Continuing to use {0} may damage your server, your data, or your computer. For your safety, this plugin has been disabled.", assembly.GetName().Name), TraceLevel.Error);
-						continue;
-					}
 
 					foreach (Type type in assembly.GetExportedTypes())
 					{

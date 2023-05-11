@@ -15,6 +15,8 @@ namespace TerrariaApi.Server
 {
 	public class Program
 	{
+		public static ServerConfig config;
+
 		/// <summary>
 		/// Initialises any internal values before any server initialisation begins
 		/// </summary>
@@ -101,7 +103,7 @@ namespace TerrariaApi.Server
 			AppDomain.CurrentDomain.UnhandledException += UnhandledException;
 			try
 			{
-				ServerConfig config = JsonConvert.DeserializeObject<ServerConfig>(File.ReadAllText(args[0]));
+				config = JsonConvert.DeserializeObject<ServerConfig>(File.ReadAllText(args[0]));
 				ServerApi.ServerPluginsDirectoryPath = args[1];
 				string[] argsCreated = config.CreateArgs(args[2]);
 				Process parent = Process.GetProcessById(int.Parse(args[4]));
@@ -115,11 +117,7 @@ namespace TerrariaApi.Server
 					orig(self, time);
 					if (parent.HasExited)
 					{
-						DefaultInterpolatedStringHandler defaultInterpolatedStringHandler3 = new DefaultInterpolatedStringHandler(38, 1);
-						defaultInterpolatedStringHandler3.AppendLiteral("parent(pid #");
-						defaultInterpolatedStringHandler3.AppendFormatted(parent.Id);
-						defaultInterpolatedStringHandler3.AppendLiteral(") exited, server exiting..");
-						Console.WriteLine(defaultInterpolatedStringHandler3.ToStringAndClear());
+						Console.WriteLine($"parent(pid #{parent.Id}) exited, server exiting..");
 						Environment.Exit(114514);
 					}
 				};
@@ -138,7 +136,8 @@ namespace TerrariaApi.Server
 			}
 			catch (Exception ex)
 			{
-				ServerApi.LogWriter.ServerWriteLine("Server crashed due to an unhandled exception:\n" + ex, TraceLevel.Error);
+				//ServerApi.LogWriter.ServerWriteLine("Server crashed due to an unhandled exception:\n" + ex, TraceLevel.Error);
+				Console.WriteLine("Server crashed due to an unhandled exception:\n" + ex);
 			}
 		}
 
