@@ -1,10 +1,15 @@
 ﻿using System;
-using System.IO;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Terraria.ID;
-using TerrariaApi.Server;
 using ReLogic.OS;
+using MonoMod.RuntimeDetour.HookGen;
+using GameLauncher;
+using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
+using System.Text;
 
 namespace TerrariaApi.Server
 {
@@ -96,14 +101,38 @@ namespace TerrariaApi.Server
 			AppDomain.CurrentDomain.UnhandledException += UnhandledException;
 			try
 			{
-				PrepareSavePath(args);
+				ServerConfig config = JsonConvert.DeserializeObject<ServerConfig>(File.ReadAllText(args[0]));
+				ServerApi.ServerPluginsDirectoryPath = args[1];
+				string[] argsCreated = config.CreateArgs(args[2]);
+				Process parent = Process.GetProcessById(int.Parse(args[4]));
+
+				PrepareSavePath(argsCreated);
 				InitialiseInternals();
-				ServerApi.Hooks.AttachOTAPIHooks(args);
+				ServerApi.Hooks.AttachOTAPIHooks(argsCreated);
+
+				On.Terraria.Main.Update += delegate (On.Terraria.Main.orig_Update orig, Terraria.Main self, GameTime time)
+				{
+					orig(self, time);
+					if (parent.HasExited)
+					{
+						DefaultInterpolatedStringHandler defaultInterpolatedStringHandler3 = new DefaultInterpolatedStringHandler(38, 1);
+						defaultInterpolatedStringHandler3.AppendLiteral("parent(pid #");
+						defaultInterpolatedStringHandler3.AppendFormatted(parent.Id);
+						defaultInterpolatedStringHandler3.AppendLiteral(") exited, server exiting..");
+						Console.WriteLine(defaultInterpolatedStringHandler3.ToStringAndClear());
+						Environment.Exit(114514);
+					}
+				};
+
+				Console.InputEncoding = Encoding.UTF8;
+				Console.OutputEncoding = Encoding.UTF8;
+				Console.SetIn(new TextWrapper(Console.In));
+				Console.ReadLine();
 
 				// avoid any Terraria.Main calls here or the heaptile hook will not work.
 				// this is because the hook is executed on the Terraria.Main static constructor,
 				// and simply referencing it in this method will trigger the constructor.
-				StartServer(args);
+				StartServer(argsCreated);
 
 				ServerApi.DeInitialize();
 			}
@@ -115,6 +144,7 @@ namespace TerrariaApi.Server
 
 		static void StartServer(string[] args)
 		{
+			Terraria.Main.SkipAssemblyLoad = true;
 			if (args.Any(x => x == "-skipassemblyload"))
 			{
 				Terraria.Main.SkipAssemblyLoad = true;
@@ -133,5 +163,47 @@ namespace TerrariaApi.Server
 		{
 			Console.WriteLine($"Unhandled exception\n{e}");
 		}
+
+
+		#region Console Hooks
+
+		static Program()
+		{
+			HookEndpointManager.Add(typeof(Console).GetProperty("ForegroundColor")?.SetMethod, new Action<ConsoleColor>(SetFColor));
+			HookEndpointManager.Add(typeof(Console).GetProperty("BackgroundColor")?.SetMethod, new Action<ConsoleColor>(SetBColor));
+			HookEndpointManager.Add(typeof(Console).GetProperty("Title")?.SetMethod, new Action<string>(SetTitle));
+			HookEndpointManager.Add(typeof(Console).GetMethod("ResetColor"), new Action(ResetColor));
+			ResetColor();
+		}
+
+		[MethodImpl(MethodImplOptions.NoInlining)]
+		public static void SetBColor(ConsoleColor value) => Console.WriteLine($"\u0001bgclr{value}");
+
+		[MethodImpl(MethodImplOptions.NoInlining)]
+		public static void SetFColor(ConsoleColor value)
+		{
+			switch (value)
+			{
+				case ConsoleColor.Gray:
+					Console.WriteLine("\u0001fgclrLightGray");
+					return;
+				case ConsoleColor.DarkGray:
+					Console.WriteLine("\u0001fgclrGray");
+					return;
+			}
+			Console.WriteLine($"\u0001fgclr{value}");
+		}
+
+		[MethodImpl(MethodImplOptions.NoInlining)]
+		public static void SetTitle(string value) => Console.WriteLine($"\u0001title{value}");
+
+		[MethodImpl(MethodImplOptions.NoInlining)]
+		public static void ResetColor()
+		{
+			SetFColor(ConsoleColor.Gray);
+			SetBColor(ConsoleColor.Black);
+		}
+
+		#endregion
 	}
 }

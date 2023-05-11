@@ -43,7 +43,7 @@ namespace TerrariaApi.Server
 		public static string ServerPluginsDirectoryPath
 		{
 			get;
-			private set;
+			set;
 		}
 		public static ReadOnlyCollection<PluginContainer> Plugins
 		{
@@ -101,7 +101,7 @@ namespace TerrariaApi.Server
 
 			ServerApi.game = game;
 			HandleCommandLine(commandLineArgs);
-			ServerPluginsDirectoryPath = Path.Combine(AppContext.BaseDirectory, PluginsPath);
+			// ServerPluginsDirectoryPath = Path.Combine(AppContext.BaseDirectory, PluginsPath);
 
 			if (!Directory.Exists(ServerPluginsDirectoryPath))
 			{
@@ -394,6 +394,16 @@ namespace TerrariaApi.Server
 
 								continue;
 							}
+						}
+
+						if (assembly.GetName().Name != fileNameWithoutExtension)
+						{
+							LogWriterManager logWriter3 = LogWriter;
+							logWriter3.ServerWriteLine($"Plugin Assembly Name `{assembly.GetName().Name}` is inconsistency with plugin file name `{fileInfo.Name}`", TraceLevel.Warning);
+						}
+						if (fileNameWithoutExtension.Any(c => c >= '\u0080'))
+						{
+							LogWriter.ServerWriteLine($"Plugin Name `{fileNameWithoutExtension}` contains non-ascii character(s)", TraceLevel.Warning);
 						}
 
 						TerrariaPlugin pluginInstance;
