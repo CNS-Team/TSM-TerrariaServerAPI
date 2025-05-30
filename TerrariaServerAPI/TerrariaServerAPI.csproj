@@ -4,11 +4,11 @@
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
 		<AssemblyName>TerrariaServer</AssemblyName> <!-- old plugins reference this, if it changes, they break -->
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net9.0</TargetFramework>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<RunPostBuildEvent>Always</RunPostBuildEvent>
-		<Version>5.2.0</Version>
+		<Version>5.2.1</Version>
 		<AssemblyTitle>TSAPI</AssemblyTitle>
 		<Product>TSAPI</Product>
 		<Company>Pryaxis &amp; TShock Contributors</Company>
@@ -21,8 +21,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="6.0.1" />
-		<PackageReference Include="OTAPI.Upcoming" Version="3.1.20" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.0" />
+		<PackageReference Include="OTAPI.Upcoming" Version="3.2.4" />
 	</ItemGroup>
 </Project>
